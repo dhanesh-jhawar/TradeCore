@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ──────────────────────────────────────────
+// USERS & AUTH
+// ──────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("USER") // USER | ADMIN
+  buyingPower  Float      @default(500000.0)
+  status       String     @default("ACTIVE")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  orders         Order[]
+  tradesAsBuyer  Trade[]          @relation("BuyerTrades")
+  tradesAsSeller Trade[]          @relation("SellerTrades")
+  portfolio      Portfolio?
+  wallet         Wallet?
+  watchlists     Watchlist[]
+  alerts         Alert[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ──────────────────────────────────────────
+// COMPANIES (100 SIMULATED)
+// ──────────────────────────────────────────
+
+model Company {
+  id              String    @id @default(uuid())
+  symbol          String    @unique
+  companyName     String
+  sector          String
+  industry        String
+  currentPrice    Float
+  openingPrice    Float
+  previousClose   Float
+  dayHigh         Float
+  dayLow          Float
+  volume          Int       @default(0)
+  marketCap       Float
+  peRatio         Float     @default(24.35)
+  dividendYield   Float     @default(1.35)
+  // Exchange-engine parameters
+  volatility      Float     @default(0.02)    // Annualized vol σ (used by bot simulator)
+  liquidity       Float     @default(1.0)     // Relative liquidity multiplier 0.1–5.0
+  avgOrderRate    Float     @default(2.0)     // Bot orders/sec target for this symbol
+  avgOrderSize    Int       @default(100)     // Mean lot size bots generate
+  tickSize        Float     @default(0.05)    // Minimum price increment
+  status          String    @default("ACTIVE") // ACTIVE | HALTED | DELISTED
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  orders         Order[]
+  trades         Trade[]
+  priceHistory   PriceHistory[]
+  marketStats    MarketStatistics[]
+  holdings       PortfolioHolding[]
+  watchlistItems WatchlistItem[]
+  alerts         Alert[]
+  marketEvents   MarketEvent[]
+
+  @@index([symbol])
+  @@index([sector])
+  @@index([status])
+}
+
+// ──────────────────────────────────────────
+// ORDERS & MATCHING
+// ──────────────────────────────────────────
+
+model Order {
+  id                String       @id @default(uuid())
+  clientOrderId     String       // Idempotency key from client
+  sequenceNumber    Int          @default(0) // Application-managed global FIFO tiebreaker
+  userId            String
+  companyId         String
+  side              String       // BUY | SELL
+  orderType         String       // LIMIT | MARKET
+  price             Float
+  quantity          Int
+  remainingQuantity Int
+  filledQuantity    Int          @default(0)
+  reservedAmount    Float        @default(0)   // Funds/holdings reserved on placement
+  status            String       // NEW | VALIDATED | OPEN | PARTIALLY_FILLED | FILLED | CANCELLED | REJECTED
+  source            String       @default("USER") // USER | SIMULATED | SYSTEM
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company           Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  events            OrderEvent[]
+  buyTrades         Trade[]      @relation("BuyOrderTrades")
+  sellTrades        Trade[]      @relation("SellOrderTrades")
+
+  @@unique([userId, clientOrderId])
+  @@index([userId])
+  @@index([companyId])
+  @@index([status])
+  @@index([side, companyId, status])
+  @@index([companyId, side, price])
+  @@index([createdAt])
+  @@index([sequenceNumber])
+}
+
+model OrderEvent {
+  id                String   @id @default(uuid())
+  orderId           String
+  eventType         String   // ORDER_CREATED | ORDER_VALIDATED | ORDER_QUEUED | ORDER_MATCHED | ORDER_PARTIALLY_FILLED | ORDER_FILLED | ORDER_CANCELLED | ORDER_REJECTED
+  price             Float
+  quantity          Int
+  remainingQuantity Int
+  timestamp         DateTime @default(now())
+
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([timestamp])
+  @@index([eventType])
+}
+
+// ──────────────────────────────────────────
+// TRADES
+// ──────────────────────────────────────────
+
+model Trade {
+  id               String   @id @default(uuid())
+  buyOrderId       String
+  sellOrderId      String
+  buyerId          String
+  sellerId         String
+  companyId        String
+  price            Float
+  quantity         Int
+  exchangeSequence String?  // Reference to engine event sequence
+  executedAt       DateTime @default(now())
+
+  buyOrder         Order    @relation("BuyOrderTrades", fields: [buyOrderId], references: [id])
+  sellOrder        Order    @relation("SellOrderTrades", fields: [sellOrderId], references: [id])
+  buyer            User     @relation("BuyerTrades", fields: [buyerId], references: [id])
+  seller           User     @relation("SellerTrades", fields: [sellerId], references: [id])
+  company          Company  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([executedAt])
+  @@index([companyId, executedAt])
+}
+
+// ──────────────────────────────────────────
+// PRICE HISTORY (OHLCV candles)
+// ──────────────────────────────────────────
+
+model PriceHistory {
+  id        String   @id @default(uuid())
+  companyId String
+  timestamp DateTime @default(now())
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Int
+
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, timestamp])
+  @@index([timestamp])
+}
+
+// ──────────────────────────────────────────
+// MARKET STATISTICS (per-company snapshots)
+// ──────────────────────────────────────────
+
+model MarketStatistics {
+  id               String   @id @default(uuid())
+  companyId        String
+  timestamp        DateTime @default(now())
+  buyVolume        Int      @default(0)
+  sellVolume       Int      @default(0)
+  buyOrders        Int      @default(0)
+  sellOrders       Int      @default(0)
+  orderImbalance   Float    @default(0.0)
+  spread           Float    @default(0.0)
+  bidDepth         Int      @default(0)
+  askDepth         Int      @default(0)
+  tradeCount       Int      @default(0)
+  averageTradeSize Float    @default(0.0)
+
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([timestamp])
+}
+
+// ──────────────────────────────────────────
+// PORTFOLIO & WALLET
+// ──────────────────────────────────────────
+
+model Portfolio {
+  id              String             @id @default(uuid())
+  userId          String             @unique
+  totalValue      Float              @default(0.0)
+  investedAmount  Float              @default(0.0)
+  todayPnL        Float              @default(0.0)
+  todayPnLPercent Float              @default(0.0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings        PortfolioHolding[]
+}
+
+model PortfolioHolding {
+  id           String    @id @default(uuid())
+  portfolioId  String
+  companyId    String
+  quantity     Int
+  reservedQuantity Int @default(0)
+  averagePrice Float
+  currentPrice Float
+  realizedPnL  Float @default(0.0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  portfolio    Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([companyId])
+}
+
+model Wallet {
+  id               String              @id @default(uuid())
+  userId           String              @unique
+  availableBalance Float               @default(1000000.0)
+  reservedBalance  Float               @default(0.0)  // Funds locked by pending orders
+  usedMargin       Float               @default(0.0)
+  totalBalance     Float               @default(1000000.0)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     WalletTransaction[]
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  type        String   // DEPOSIT | WITHDRAWAL | TRADE_DEBIT | TRADE_CREDIT | RESERVE | RELEASE
+  amount      Float
+  description String
+  timestamp   DateTime @default(now())
+
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([timestamp])
+}
+
+// ──────────────────────────────────────────
+// WATCHLISTS & ALERTS
+// ──────────────────────────────────────────
+
+model Watchlist {
+  id        String          @id @default(uuid())
+  userId    String
+  name      String          @default("Default Watchlist")
+  createdAt DateTime        @default(now())
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WatchlistItem[]
+
+  @@index([userId])
+}
+
+model WatchlistItem {
+  id          String    @id @default(uuid())
+  watchlistId String
+  companyId   String
+  addedAt     DateTime  @default(now())
+
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([watchlistId])
+  @@index([companyId])
+}
+
+model Alert {
+  id          String   @id @default(uuid())
+  userId      String
+  companyId   String
+  targetPrice Float
+  condition   String   // ABOVE | BELOW
+  status      String   @default("ACTIVE") // ACTIVE | TRIGGERED | CANCELLED
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([status])
+}
+
+// ──────────────────────────────────────────
+// MARKET EVENTS (major news/announcements)
+// ──────────────────────────────────────────
+
+model MarketEvent {
+  id          String   @id @default(uuid())
+  companyId   String?
+  eventType   String   // EARNINGS | POLICY | CORPORATE_ACTION | GLOBAL | NEWS | DIVIDEND | SPLIT
+  title       String
+  description String
+  impact      String   @default("MEDIUM") // HIGH | MEDIUM | LOW
+  timestamp   DateTime @default(now())
+
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([timestamp])
+  @@index([eventType])
+}
+
+// ──────────────────────────────────────────
+// REPLAY ENGINE
+// ──────────────────────────────────────────
+
+model ReplaySession {
+  id          String        @id @default(uuid())
+  symbol      String
+  companyName String
+  startTime   DateTime
+  endTime     DateTime
+  totalTicks  Int           @default(0)
+  status      String        @default("CREATED") // CREATED | RUNNING | COMPLETED
+  createdAt   DateTime      @default(now())
+
+  events      ReplayEvent[]
+
+  @@index([symbol])
+  @@index([createdAt])
+}
+
+model ReplayEvent {
+  id              String        @id @default(uuid())
+  sessionId       String
+  step            Int
+  timestamp       DateTime
+  price           Float
+  open            Float
+  high            Float
+  low             Float
+  close           Float
+  volume          Int
+  eventType       String
+  description     String
+  orderBookJson   String        @default("{}") // Serialized JSON depth snapshot
+
+  session         ReplaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, step])
+}
+
+// ──────────────────────────────────────────
+// AUDIT LOGS & SYSTEM
+// ──────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  details   String
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+model SystemMetric {
+  id             String   @id @default(uuid())
+  ordersPerSec   Float    @default(0)
+  matchesPerSec  Float    @default(0)
+  avgLatencyMs   Float    @default(0)
+  activeUsers    Int      @default(0)
+  timestamp      DateTime @default(now())
+
+  @@index([timestamp])
+}

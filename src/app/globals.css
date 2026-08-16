@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-dark: #0B0E14;
+    --card-bg: #121722;
+    --card-border: #1E2638;
+    --accent-blue: #3B82F6;
+    --accent-blue-hover: #2563EB;
+    --green-gain: #22C55E;
+    --red-loss: #EF4444;
+  }
+
+  body {
+    background-color: var(--bg-dark);
+    color: #F8FAFC;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0E14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E2638;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3B82F6;
+}
+
+/* Glassmorphism cards */
+.trade-card {
+  background-color: #121722;
+  border: 1px solid #1E2638;
+  border-radius: 0.75rem;
+}
+
+.trade-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+.trade-card-hover:hover {
+  border-color: #3B82F6;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+/* Glowing text & badge effects */
+.glow-blue {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+.glow-green {
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+}

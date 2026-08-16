@@ -1,0 +1,27 @@
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+/**
+ * Enable SQLite WAL mode for concurrent read/write performance.
+ * Safe to call multiple times – idempotent PRAGMA.
+ */
+let walEnabled = false;
+export async function enableWalMode() {
+  if (walEnabled) return;
+  await prisma.$queryRawUnsafe('PRAGMA journal_mode=WAL;');
+  await prisma.$queryRawUnsafe('PRAGMA busy_timeout=5000;');
+  await prisma.$queryRawUnsafe('PRAGMA synchronous=NORMAL;');
+  await prisma.$queryRawUnsafe('PRAGMA foreign_keys=ON;');
+  walEnabled = true;
+}
