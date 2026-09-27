@@ -17,7 +17,13 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
 
     let whereClause: any = { userId: session.userId };
-    if (status && status !== 'ALL') whereClause.status = status;
+    if (status && status !== 'ALL') {
+      if (status === 'PENDING') {
+        whereClause.status = { in: ['NEW', 'VALIDATED', 'OPEN'] };
+      } else {
+        whereClause.status = status;
+      }
+    }
 
     const orders = await prisma.order.findMany({
       where: whereClause,
@@ -76,7 +82,8 @@ export async function POST(request: Request) {
     // 2. Validate
     const validated = await OrderStateMachine.validateOrder(submitted.id);
     if (validated.status === 'REJECTED') {
-      return NextResponse.json({ error: 'Order rejected during validation', order: validated }, { status: 400 });
+      const reason = (validated as any).rejectedReason || 'Order rejected during validation';
+      return NextResponse.json({ error: reason, order: validated }, { status: 400 });
     }
 
     // 3. Process match through queue for serialization

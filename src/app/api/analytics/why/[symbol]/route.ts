@@ -5,6 +5,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ symb
   try {
     const { symbol } = await params;
     const report = await AnalyticsEngine.analyzeMovement(symbol.toUpperCase());
+    if (!report) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ report });
   } catch (error: any) {
     console.error('Error generating movement report:', error);

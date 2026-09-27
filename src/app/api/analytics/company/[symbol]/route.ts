@@ -5,6 +5,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ symb
   try {
     const { symbol } = await params;
     const stats = await AnalyticsEngine.getCompanyRollingStats(symbol.toUpperCase());
+    if (!stats) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json({ stats });
   } catch (error: any) {
     console.error('Error generating company rolling stats:', error);

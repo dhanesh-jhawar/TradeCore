@@ -106,10 +106,11 @@ export default function OrdersPage() {
                       <td className="py-3 text-center">
                         <span className={`px-2.5 py-1 rounded text-[10px] font-bold ${
                           o.status === 'FILLED' ? 'bg-emerald-500/20 text-emerald-400' :
-                          o.status === 'PENDING' ? 'bg-amber-500/20 text-amber-400' :
-                          o.status === 'PARTIALLY_FILLED' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-400'
+                          ['NEW', 'VALIDATED', 'OPEN'].includes(o.status) ? 'bg-amber-500/20 text-amber-400' :
+                          o.status === 'PARTIALLY_FILLED' ? 'bg-blue-500/20 text-blue-400' : 
+                          o.status === 'CANCELLED' ? 'bg-slate-500/20 text-slate-400' : 'bg-red-500/20 text-red-400'
                         }`}>
-                          {o.status}
+                          {['NEW', 'VALIDATED', 'OPEN'].includes(o.status) ? 'PENDING' : o.status}
                         </span>
                       </td>
                     </tr>

@@ -15,7 +15,7 @@ export default function AdminTradesPage() {
   const [stats, setStats] = useState<any>({});
 
   const fetchTrades = () => {
-    fetch('/api/admin/trades')
+    fetch(`/api/admin/trades?filter=${encodeURIComponent(activeTab)}`)
       .then(res => res.json())
       .then(data => {
         if (data.trades) setTrades(data.trades);
@@ -27,28 +27,18 @@ export default function AdminTradesPage() {
     fetchTrades();
     const interval = setInterval(fetchTrades, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
+
+  const formatCurrency = (val: number) => {
+    if (!val) return '0';
+    if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
+    if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
+    return `₹${val.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  };
 
   const filteredTrades = React.useMemo(() => {
-    if (activeTab === 'All Trades') return trades;
-    if (activeTab === "Today's Trades") {
-      // In this demo, assume all returned are recent, but let's just show top half to simulate filtering
-      return trades.slice(0, Math.ceil(trades.length / 2));
-    }
-    if (activeTab === 'Large Trades') {
-      return trades.filter(t => {
-        const val = parseFloat((t.val || '0').replace(/,/g, ''));
-        return val > 100000;
-      });
-    }
-    if (activeTab === 'Company-wise') {
-      return [...trades].sort((a, b) => a.comp.localeCompare(b.comp));
-    }
-    if (activeTab === 'User-wise') {
-      return [...trades].sort((a, b) => a.buy.localeCompare(b.buy));
-    }
     return trades;
-  }, [trades, activeTab]);
+  }, [trades]);
 
   const exportData = () => {
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -111,12 +101,12 @@ export default function AdminTradesPage() {
 
             <div className="trade-card p-4 space-y-1">
               <div className="text-[11px] font-semibold text-slate-400">Total Volume</div>
-              <div className="text-2xl font-extrabold text-white">₹{stats.totalVolume?.toLocaleString() || 0}</div>
+              <div className="text-2xl font-extrabold text-white">{formatCurrency(stats.totalVolume)}</div>
             </div>
 
             <div className="trade-card p-4 space-y-1">
               <div className="text-[11px] font-semibold text-slate-400">Average Trade Size</div>
-              <div className="text-2xl font-extrabold text-white">₹{stats.averageTradeSize?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || 0}</div>
+              <div className="text-2xl font-extrabold text-white">{formatCurrency(stats.averageTradeSize)}</div>
               <div className="text-[10px] font-semibold text-emerald-400">+3.21% vs yesterday</div>
             </div>
 

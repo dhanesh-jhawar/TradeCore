@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     if (action === 'START') {
       await simulator.start();
     } else if (action === 'STOP') {
-      simulator.stop();
+      await simulator.stop();
     } else if (action === 'UPDATE_CONFIG' && config) {
       simulator.updateConfig(config);
     } else {

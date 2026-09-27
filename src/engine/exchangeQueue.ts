@@ -78,9 +78,10 @@ export class ExchangeQueue {
            
            // Broadcast order book update
            const book = OrderBookManager.getBook(companyId);
+           const depth = book.getDepth(10);
            EventBus.broadcast(`MARKET_${companyId}`, 'ORDER_BOOK_UPDATED', {
-             bids: book.getBids(),
-             asks: book.getAsks()
+             bids: depth.bids,
+             asks: depth.asks
            });
         } else {
            this.events.emit(`order_processed_${item.orderId}`, { data: null });

@@ -4,7 +4,7 @@ import { EventBus } from './eventBus';
 import { OrderStateMachine } from './orderStateMachine';
 import { ExchangeQueue } from './exchangeQueue';
 import { Money } from '../utils/money';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 export interface SimulatorConfig {
   enabled: boolean;
@@ -154,7 +154,7 @@ export class SimulatorEngine {
     }, 1000);
   }
 
-  public stop() {
+  public async stop() {
     if (!this.isRunning) return;
     this.isRunning = false;
     this.config.enabled = false;
@@ -162,6 +162,29 @@ export class SimulatorEngine {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    
+    // Clear pending simulated orders to reset immediately
+    try {
+      await prisma.order.updateMany({
+        where: { 
+          source: 'SIMULATOR', 
+          status: { in: ['NEW', 'VALIDATED', 'OPEN', 'PARTIALLY_FILLED'] }
+        },
+        data: { status: 'CANCELLED' }
+      });
+      // Also clear them from the in-memory order book
+      const openSimOrders = await prisma.order.findMany({
+        where: { source: 'SIMULATOR', status: 'CANCELLED' },
+        select: { id: true, companyId: true, side: true }
+      });
+      for (const order of openSimOrders) {
+         const book = OrderBookManager.getBook(order.companyId);
+         book.cancelOrder(order.id);
+      }
+    } catch (e) {
+      console.error('[SimulatorEngine] Error clearing simulator orders on stop:', e);
+    }
+    
     console.log('[SimulatorEngine] Simulator STOPPED');
   }
 
@@ -204,12 +227,13 @@ export class SimulatorEngine {
       
       const comp = this.companies[Math.floor(Math.random() * this.companies.length)];
       
-      // Strict per-company backpressure
-      if (ExchangeQueue.getDepth(comp.id) > 1000) {
+      // Async queue backpressure
+      if (ExchangeQueue.getDepth(comp.id) > 100) {
         continue;
       }
 
       const bot = this.bots[Math.floor(Math.random() * this.bots.length)];
+
       
       this.activeInFlightOrders++;
 
@@ -228,6 +252,7 @@ export class SimulatorEngine {
   }
 
   private async generateAndSubmitOrder(bot: SimulatedTrader, company: any) {
+    if (!this.isRunning) return;
     try {
       const book = OrderBookManager.getBook(company.id);
       const snapshot = book.getSnapshot();
@@ -249,7 +274,8 @@ export class SimulatorEngine {
         }
       } else if (bot.role === 'RETAIL') {
         // Retail often crosses the spread (MARKET) or places aggressive limits
-        if (Math.random() > 0.6) {
+        // Increased to 70% chance to guarantee a high matching ratio as requested by user
+        if (Math.random() < 0.70) {
           orderType = 'MARKET';
         } else {
           if (side === 'BUY') {
@@ -259,13 +285,32 @@ export class SimulatorEngine {
           }
         }
       } else if (bot.role === 'INSTITUTIONAL') {
-        // Institutions hide slightly behind best prices
-        if (side === 'BUY') {
-          price = snapshot.bestBid ? snapshot.bestBid - (company.tickSize * 2) : company.currentPrice - spread;
+        // Institutional sometimes aggressively takes liquidity now to boost match rate
+        if (Math.random() < 0.60) {
+          orderType = 'MARKET';
         } else {
-          price = snapshot.bestAsk ? snapshot.bestAsk + (company.tickSize * 2) : company.currentPrice + spread;
+          if (side === 'BUY') {
+            price = snapshot.bestBid ? snapshot.bestBid - (company.tickSize * 2) : company.currentPrice - spread;
+          } else {
+            price = snapshot.bestAsk ? snapshot.bestAsk + (company.tickSize * 2) : company.currentPrice + spread;
+          }
         }
       }
+
+      // Determine Quantity initially
+      let quantity = Math.floor((Math.random() * 50 + 10) * bot.orderSizeMultiplier);
+
+      // Check if we need to aggressively clear pending orders
+      /*
+      const totalOpenOrders = snapshot.depth.bids.reduce((acc: number, b: any) => acc + 1, 0) + snapshot.depth.asks.reduce((acc: number, a: any) => acc + 1, 0);
+      if (totalOpenOrders > 10) {
+         // Aggressively match against the opposite side to clear the book and keep global pending orders < 2000
+         orderType = 'MARKET';
+         side = snapshot.depth.asks.length > snapshot.depth.bids.length ? 'BUY' : 'SELL';
+         const aggressiveVolume = (side === 'BUY' ? snapshot.depth.asks[0]?.volume : snapshot.depth.bids[0]?.volume) || 100;
+         quantity = aggressiveVolume + Math.floor(Math.random() * 50);
+      }
+      */
 
       // Add volatility noise
       const maxNoise = company.currentPrice * 0.005 * this.config.volatilityMultiplier; // 0.5% max noise
@@ -281,8 +326,7 @@ export class SimulatorEngine {
       // Safety check
       if (price <= 0) price = company.tickSize;
 
-      // Determine Quantity
-      let quantity = Math.floor((Math.random() * 50 + 10) * bot.orderSizeMultiplier);
+      // Quantity is already determined above
       
       // Execute through standard pipeline
       const submitted = await OrderStateMachine.submitOrder({
@@ -307,7 +351,7 @@ export class SimulatorEngine {
     } catch (e: any) {
       // Intentionally swallow individual order generation errors to keep simulator running,
       // but you might want to log them in debug mode.
-      // console.error('[SimulatorEngine] Order Error:', e.message);
+      console.error('[SimulatorEngine] Order Error:', e.message);
     }
   }
 }

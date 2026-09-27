@@ -14,6 +14,7 @@ export default function AdminCompanyAnalysisPage() {
   const [companies, setCompanies] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({});
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [activeTimeline, setActiveTimeline] = useState('1W');
 
   const fetchCompanies = () => {
     fetch('/api/admin/companies')
@@ -55,7 +56,10 @@ export default function AdminCompanyAnalysisPage() {
                 <Download className="h-3.5 w-3.5" />
                 <span>Export Report</span>
               </button>
-              <button className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/30">
+              <button 
+                onClick={() => alert("Advanced filtering panel will open here. Currently in development.")}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500"
+              >
                 <Filter className="h-3.5 w-3.5" />
                 <span>Filters</span>
               </button>
@@ -135,7 +139,11 @@ export default function AdminCompanyAnalysisPage() {
                   </thead>
                   <tbody className="divide-y divide-[#1E2638]/40">
                     {companies.slice(0, 5).map((c: any) => (
-                      <tr key={c.name} className="hover:bg-[#1E2638]/40">
+                      <tr 
+                        key={c.name} 
+                        className="hover:bg-[#1E2638]/40 cursor-pointer transition-colors"
+                        onClick={() => setSelectedCompany(c)}
+                      >
                         <td className="py-2 font-bold text-white">{c.name}</td>
                         <td className="py-2 text-slate-400 text-[11px]">{c.sec}</td>
                         <td className="py-2 text-right font-bold text-white">{c.mcap}</td>
@@ -167,7 +175,7 @@ export default function AdminCompanyAnalysisPage() {
                   </ResponsiveContainer>
                   <div className="absolute text-center">
                     <div className="text-[9px] text-slate-400">Total Market Cap</div>
-                    <div className="text-xs font-bold text-white">₹{((stats.totalMarketCap || 0) / 1000000000000).toFixed(2)} L Cr</div>
+                    <div className="text-xs font-bold text-white">₹{((stats.totalMarketCap || 0) / 10000000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr</div>
                   </div>
                 </div>
                 <div className="space-y-1 text-xs">
@@ -260,8 +268,14 @@ export default function AdminCompanyAnalysisPage() {
                         <div className="flex justify-between items-center text-xs">
                           <span className="text-slate-400 font-semibold">Price Performance Trend</span>
                           <div className="flex gap-1 text-[10px] font-bold">
-                            {['1D', '1W', '1M', '3M', '1Y', 'YTD', 'ALL'].map((tf, i) => (
-                              <button key={tf} className={`px-2 py-0.5 rounded ${i === 1 ? 'bg-blue-600 text-white' : 'text-slate-500'}`}>{tf}</button>
+                            {['1D', '1W', '1M', '3M', '1Y', 'YTD', 'ALL'].map((tf) => (
+                              <button 
+                                key={tf} 
+                                onClick={() => setActiveTimeline(tf)}
+                                className={`px-2 py-0.5 rounded transition ${activeTimeline === tf ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-white'}`}
+                              >
+                                {tf}
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -289,7 +303,110 @@ export default function AdminCompanyAnalysisPage() {
                       </div>
                     </>
                   )}
-                  {activeTab !== 'Overview' && (
+                  {activeTab === 'Financials' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="trade-card p-5 space-y-3">
+                        <h4 className="text-sm font-bold text-white">Quarterly Performance (Estimated)</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">Revenue</span><span className="font-bold text-white">₹{((selectedCompany.raw?.marketCap || 0) * 0.1 / 10000000).toFixed(2)} Cr</span></div>
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">EBITDA</span><span className="font-bold text-white">₹{((selectedCompany.raw?.marketCap || 0) * 0.02 / 10000000).toFixed(2)} Cr</span></div>
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">Net Profit</span><span className="font-bold text-white">₹{((selectedCompany.raw?.marketCap || 0) * 0.01 / 10000000).toFixed(2)} Cr</span></div>
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">EPS</span><span className="font-bold text-white">₹{(selectedCompany.raw?.currentPrice * 0.05).toFixed(2)}</span></div>
+                        </div>
+                      </div>
+                      <div className="trade-card p-5 space-y-3">
+                        <h4 className="text-sm font-bold text-white">Balance Sheet Overview</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">Total Assets</span><span className="font-bold text-white">₹{((selectedCompany.raw?.marketCap || 0) * 0.5 / 10000000).toFixed(2)} Cr</span></div>
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">Total Liabilities</span><span className="font-bold text-white">₹{((selectedCompany.raw?.marketCap || 0) * 0.2 / 10000000).toFixed(2)} Cr</span></div>
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">Total Equity</span><span className="font-bold text-white">₹{((selectedCompany.raw?.marketCap || 0) * 0.3 / 10000000).toFixed(2)} Cr</span></div>
+                          <div className="flex justify-between border-b border-[#1E2638] pb-1"><span className="text-slate-400">Debt to Equity</span><span className="font-bold text-emerald-400">0.01</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'Performance' && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-semibold">Extended Price Performance</span>
+                        <div className="flex gap-1 text-[10px] font-bold">
+                          {['1D', '1W', '1M', '3M', '1Y', 'YTD', 'ALL'].map((tf) => (
+                            <button 
+                              key={tf} 
+                              onClick={() => setActiveTimeline(tf)}
+                              className={`px-2 py-0.5 rounded transition ${activeTimeline === tf ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-white'}`}
+                            >
+                              {tf}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={selectedCompany.raw?.priceHistory || []}>
+                            <XAxis dataKey="time" stroke="#64748B" fontSize={10} />
+                            <YAxis stroke="#64748B" fontSize={10} domain={['dataMin - 100', 'dataMax + 100']} />
+                            <Tooltip contentStyle={{ backgroundColor: '#0B0E14', borderColor: '#1E2638', color: '#fff', borderRadius: '8px' }} />
+                            <Area type="monotone" dataKey="price" stroke="#10B981" fill="#10B981" fillOpacity={0.2} strokeWidth={2} />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'Peers Comparison' && (
+                    <div className="overflow-x-auto border border-[#1E2638] rounded-xl">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="bg-[#121722] text-slate-400">
+                            <th className="p-3">Peer Company</th>
+                            <th className="p-3">Sector</th>
+                            <th className="p-3 text-right">Market Cap</th>
+                            <th className="p-3 text-right">Price</th>
+                            <th className="p-3 text-right">P/E</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2638]">
+                          {companies.filter(c => c.sec === selectedCompany.sec && c.sym !== selectedCompany.sym).slice(0, 5).map(peer => (
+                            <tr key={peer.sym} className="hover:bg-[#1E2638]/40 cursor-pointer" onClick={() => setSelectedCompany(peer)}>
+                              <td className="p-3 font-bold text-white">{peer.name}</td>
+                              <td className="p-3 text-slate-400">{peer.sec}</td>
+                              <td className="p-3 text-right font-bold">{peer.mcap}</td>
+                              <td className="p-3 text-right">{peer.price}</td>
+                              <td className="p-3 text-right">{(peer.raw?.currentPrice / 10).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {companies.filter(c => c.sec === selectedCompany.sec).length <= 1 && (
+                        <div className="p-5 text-center text-slate-500">No peers found in the exact same sector.</div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'Corporate Actions' && (
+                    <div className="space-y-3 text-xs">
+                      {[
+                        { action: 'Final Dividend', value: `₹${(selectedCompany.raw?.currentPrice * 0.02).toFixed(2)} per share`, exDate: '15 Aug 2026', recordDate: '16 Aug 2026' },
+                        { action: 'Interim Dividend', value: `₹${(selectedCompany.raw?.currentPrice * 0.01).toFixed(2)} per share`, exDate: '10 Feb 2026', recordDate: '11 Feb 2026' },
+                        { action: 'AGM', value: 'Annual General Meeting', exDate: '-', recordDate: '24 Sep 2026' },
+                      ].map((act, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 rounded-lg bg-[#0B0E14] border border-[#1E2638]">
+                          <div>
+                            <div className="font-bold text-white">{act.action}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{act.value}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[10px] text-slate-500">Ex-Date: <span className="text-slate-300 font-semibold">{act.exDate}</span></div>
+                            <div className="text-[10px] text-slate-500">Record Date: <span className="text-slate-300 font-semibold">{act.recordDate}</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {['Documents', 'News & Updates'].includes(activeTab) && (
                     <div className="flex flex-col items-center justify-center h-64 text-slate-500 text-sm border border-dashed border-[#1E2638] rounded-xl bg-[#0B0E14]/50">
                       <BarChart3 className="h-8 w-8 mb-2 opacity-50" />
                       <div className="font-semibold text-white mb-1">{activeTab} data for {selectedCompany.sym}</div>

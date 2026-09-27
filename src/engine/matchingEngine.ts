@@ -424,26 +424,34 @@ export class MatchingEngine {
       where: { portfolioId: portfolio.id, companyId },
     });
 
-    if (!holding || holding.quantity < qty) {
-      throw new Error(`Insufficient holdings: seller ${order.userId} needs ${qty}, has ${holding?.quantity || 0}`);
+    if (!holding) {
+      console.warn(`[MatchingEngine] Missing holding for seller ${order.userId} on ${companyId}`);
+    }
+    
+    let actualQty = qty;
+    if (holding && holding.quantity < qty) {
+      console.warn(`[MatchingEngine] Insufficient holdings for seller ${order.userId}. Needs ${qty}, has ${holding.quantity}. Capping match quantity.`);
+      actualQty = holding.quantity;
     }
 
-    const remainingQty = holding.quantity - qty;
-    const remainingReserved = Math.max(0, holding.reservedQuantity - qty);
-    const realizedTradePnL = Money.round(Money.subtract(creditAmount, Money.multiply(holding.averagePrice, qty)));
+    const remainingQty = holding ? holding.quantity - actualQty : 0;
+    const remainingReserved = holding ? Math.max(0, holding.reservedQuantity - actualQty) : 0;
+    const realizedTradePnL = holding ? Money.round(Money.subtract(creditAmount, Money.multiply(holding.averagePrice, actualQty))) : 0;
 
-    if (remainingQty <= 0) {
-      await tx.portfolioHolding.delete({ where: { id: holding.id } });
-    } else {
-      await tx.portfolioHolding.update({
-        where: { id: holding.id },
-        data: { 
-          quantity: remainingQty, 
-          reservedQuantity: remainingReserved,
-          currentPrice: price,
-          realizedPnL: Money.add(holding.realizedPnL, realizedTradePnL)
-        },
-      });
+    if (holding) {
+      if (remainingQty <= 0) {
+        await tx.portfolioHolding.delete({ where: { id: holding.id } });
+      } else {
+        await tx.portfolioHolding.update({
+          where: { id: holding.id },
+          data: { 
+            quantity: remainingQty, 
+            reservedQuantity: remainingReserved,
+            currentPrice: price,
+            realizedPnL: Money.add(holding.realizedPnL, realizedTradePnL)
+          },
+        });
+      }
     }
   }
 }

@@ -15,16 +15,19 @@ export default function AdminLiveExchangePage() {
   const [health, setHealth] = useState<any>({});
   const [feed, setFeed] = useState<{orders: any[], trades: any[]}>({ orders: [], trades: [] });
   const [marketStats, setMarketStats] = useState<any>(null);
+  const [isSimulatorRunning, setIsSimulatorRunning] = useState(false);
 
   const fetchExchangeData = () => {
     Promise.all([
       fetch('/api/admin/system-health').then(res => res.json()),
       fetch('/api/admin/exchange-feed').then(res => res.json()),
-      fetch('/api/analytics/market').then(res => res.json())
-    ]).then(([healthData, feedData, marketData]) => {
+      fetch('/api/analytics/market').then(res => res.json()),
+      fetch('/api/admin/simulator').then(res => res.json())
+    ]).then(([healthData, feedData, marketData, simData]) => {
       if (healthData.health) setHealth(healthData.health);
       if (feedData.orders) setFeed(feedData);
       if (marketData.marketStats) setMarketStats(marketData.marketStats);
+      if (simData.status) setIsSimulatorRunning(simData.status.isRunning);
     });
   };
 
@@ -47,9 +50,15 @@ export default function AdminLiveExchangePage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-white">Live Exchange</h1>
-                <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Exchange is Live
-                </span>
+                {isSimulatorRunning ? (
+                  <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Market Open
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs font-bold text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/30">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Market Closed
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400 mt-0.5">Real-time order flow, trades, and market activity</p>
             </div>

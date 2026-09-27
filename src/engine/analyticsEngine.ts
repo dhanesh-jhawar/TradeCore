@@ -43,7 +43,7 @@ export class AnalyticsEngine {
     });
 
     if (!company) {
-      throw new Error(`Company with symbol ${symbol} not found`);
+      return null;
     }
 
     const price = company.currentPrice;
@@ -183,7 +183,7 @@ export class AnalyticsEngine {
     });
 
     if (!company) {
-      throw new Error(`Company with symbol ${symbol} not found`);
+      return null;
     }
 
     const now = Date.now();
@@ -344,7 +344,7 @@ export class AnalyticsEngine {
       decliners,
       unchanged,
       totalVolume,
-      totalMarketCap: Number((totalMarketCap / 100000).toFixed(2)), // In Lakh Crores
+      totalMarketCap, // Return raw to let UI format it
       sectorPerformance,
       snapshotData,
     };

@@ -80,7 +80,7 @@ export async function GET() {
           price: `₹${c.currentPrice.toFixed(2)}`,
           chg: `${chg > 0 ? '+' : ''}${chgPct.toFixed(2)}%`,
           vol: `${(c.volume / 10000000).toFixed(2)} Cr`,
-          mcap: `₹${(c.marketCap / 10000000).toLocaleString(undefined, { maximumFractionDigits: 0 })} Cr`,
+          mcap: `₹${(c.marketCap / 10000000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr`,
           raw: c // Keep raw data for inspector
         };
       }),

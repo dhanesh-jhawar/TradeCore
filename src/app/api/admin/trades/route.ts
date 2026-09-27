@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const trades = await prisma.trade.findMany({
+    const { searchParams } = new URL(request.url);
+    const filter = searchParams.get('filter');
+
+    let trades = await prisma.trade.findMany({
       orderBy: { executedAt: 'desc' },
       include: {
         company: { select: { symbol: true } },
       }
     });
+
+    if (filter === "Today's Trades") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      trades = trades.filter(t => t.executedAt.getTime() >= todayStart.getTime());
+    } else if (filter === 'Large Trades') {
+      trades = trades.filter(t => (t.price * t.quantity) > 100000);
+    } else if (filter === 'Company-wise') {
+      trades = trades.sort((a, b) => a.company.symbol.localeCompare(b.company.symbol));
+    } else if (filter === 'User-wise') {
+      trades = trades.sort((a, b) => a.buyerId.localeCompare(b.buyerId));
+    }
 
     const totalTrades = trades.length;
     let totalVolume = 0;
@@ -111,12 +126,14 @@ export async function GET() {
         return {
           tid: t.id.split('-')[0].toUpperCase(),
           time: new Date(t.executedAt).toLocaleTimeString(),
+          timestamp: new Date(t.executedAt).getTime(),
           comp: t.company.symbol,
           buy: t.buyerId.split('-')[0].toUpperCase(),
           sell: t.sellerId.split('-')[0].toUpperCase(),
           p: t.price.toFixed(2),
           q: t.quantity,
           val: `₹${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+          valRaw: val,
           side: t.id.charCodeAt(0) % 2 === 0 ? 'BUY' : 'SELL'
         };
       }),

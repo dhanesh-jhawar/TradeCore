@@ -129,13 +129,6 @@ export class OrderStateMachine {
       // Validation Rules
       if (order.company.status !== 'ACTIVE') {
         rejectedReason = 'Company is not active for trading';
-      } else if (order.orderType === 'LIMIT') {
-        // Tick size validation
-        const tickSize = order.company.tickSize;
-        const remainder = Money.round(order.price % tickSize);
-        if (remainder > 0.0001 && remainder < tickSize - 0.0001) {
-          rejectedReason = `Price must be a multiple of tick size (${tickSize})`;
-        }
       }
 
       // Wallet / Portfolio Validation & Reservation
@@ -193,7 +186,8 @@ export class OrderStateMachine {
       }
 
       if (rejectedReason) {
-        return this._transition(tx, order, 'REJECTED', 'ORDER_REJECTED', rejectedReason);
+        const rejectedOrder = await this._transition(tx, order, 'REJECTED', 'ORDER_REJECTED', rejectedReason);
+        return Object.assign(rejectedOrder, { rejectedReason });
       }
 
       const validOrder = await this._transition(tx, order, 'VALIDATED', 'ORDER_VALIDATED');

@@ -379,7 +379,7 @@ export default function StockTradingPage() {
                       </button>
                       <input
                         type="number"
-                        step="0.05"
+                        step="0.01"
                         value={price}
                         onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
                         className="w-full bg-transparent text-center font-extrabold text-white focus:outline-none"
