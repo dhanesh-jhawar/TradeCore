@@ -17,10 +17,12 @@ import {
   Settings,
   Sparkles,
   ShieldAlert,
+  MessageSquareText,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'AI Assistant', href: '/chat', icon: MessageSquareText },
   { label: 'Markets', href: '/markets', icon: TrendingUp },
   { label: 'Watchlist', href: '/watchlist', icon: Star },
   { label: 'Orders', href: '/orders', icon: ClipboardList },
@@ -42,7 +44,6 @@ export const UserSidebar: React.FC<{ isOpen?: boolean }> = ({ isOpen = true }) =
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      {/* Brand Header */}
       <div className="flex h-16 items-center gap-3 border-b border-[#1E2638] px-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-lg shadow-blue-500/20">
           <TrendingUp className="h-5 w-5 text-white" />
@@ -52,7 +53,6 @@ export const UserSidebar: React.FC<{ isOpen?: boolean }> = ({ isOpen = true }) =
         </Link>
       </div>
 
-      {/* Navigation List */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -75,9 +75,7 @@ export const UserSidebar: React.FC<{ isOpen?: boolean }> = ({ isOpen = true }) =
         })}
       </nav>
 
-      {/* Footer Cards */}
       <div className="space-y-4 p-4 border-t border-[#1E2638]">
-        {/* Go Premium Card */}
         <div className="relative overflow-hidden rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-900/30 to-indigo-900/20 p-4">
           <div className="flex items-center gap-2 text-xs font-bold text-blue-400">
             <Sparkles className="h-4 w-4" />
@@ -91,7 +89,6 @@ export const UserSidebar: React.FC<{ isOpen?: boolean }> = ({ isOpen = true }) =
           </button>
         </div>
 
-        {/* Market Status Card */}
         <div className="rounded-xl border border-[#1E2638] bg-[#121722] p-3">
           <div className="text-[11px] font-semibold text-slate-400">Market Status</div>
           <div className="mt-1.5 flex items-center gap-2 text-xs font-bold text-emerald-400">
