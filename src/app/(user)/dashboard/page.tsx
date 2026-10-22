@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { UserSidebar } from '@/components/common/UserSidebar';
 import { useWebSocket } from '@/components/WebSocketProvider';
 import { Header } from '@/components/common/Header';
+import { ChatbotWidget } from '@/components/chat/ChatbotWidget';
 import {
   Eye,
   TrendingUp,
@@ -85,15 +86,12 @@ export default function UserDashboard() {
 
   return (
     <div className="flex min-h-screen bg-[#0B0E14] text-white">
-      {/* Navigation Sidebar */}
       <UserSidebar isOpen={sidebarOpen} />
 
-      {/* Main Content Workspace */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Welcome Header Bar */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -109,9 +107,7 @@ export default function UserDashboard() {
             </div>
           </div>
 
-          {/* 4 Core Top Metric Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Card 1: Portfolio Value */}
             <div className="trade-card p-4 space-y-3">
               <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
                 <div className="flex items-center gap-2">
@@ -136,7 +132,6 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Card 2: Today's P&L */}
             <div className="trade-card p-4 space-y-3">
               <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
                 <div className="flex items-center gap-2">
@@ -163,7 +158,6 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Card 3: Invested Amount */}
             <div className="trade-card p-4 space-y-3">
               <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
                 <div className="flex items-center gap-2">
@@ -179,7 +173,6 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Card 4: Buying Power */}
             <div className="trade-card p-4 space-y-3">
               <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
                 <div className="flex items-center gap-2">
@@ -196,9 +189,7 @@ export default function UserDashboard() {
             </div>
           </div>
 
-          {/* Main Grid Section */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            {/* Left Column: Portfolio Performance Chart (8 cols) */}
             <div className="lg:col-span-8 space-y-6">
               <div className="trade-card p-5">
                 <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#1E2638]">
@@ -226,7 +217,6 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
-                {/* Portfolio Performance Area Chart */}
                 <div className="mt-4 h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={PORTFOLIO_PERFORMANCE_DATA}>
@@ -254,9 +244,7 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              {/* Bottom Row: Your Holdings & Recent Orders */}
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* Your Holdings Table */}
                 <div className="trade-card p-5">
                   <div className="flex items-center justify-between pb-3">
                     <h3 className="text-sm font-bold text-white">Your Holdings</h3>
@@ -303,7 +291,6 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Orders Table */}
                 <div className="trade-card p-5">
                   <div className="flex items-center justify-between pb-3">
                     <h3 className="text-sm font-bold text-white">Recent Orders</h3>
@@ -344,9 +331,7 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            {/* Right Sidebar Column: Watchlist, Portfolio Allocation, Quick Actions (4 cols) */}
             <div className="lg:col-span-4 space-y-6">
-              {/* Watchlist Widget */}
               <div className="trade-card p-5">
                 <div className="flex items-center justify-between pb-3">
                   <h3 className="text-sm font-bold text-white">Watchlist</h3>
@@ -385,13 +370,12 @@ export default function UserDashboard() {
                     </Link>
                   ))}
                 </div>
-                <button className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#1E2638] py-2 text-xs font-semibold text-blue-400 hover:border-blue-500 hover:bg-blue-500/10 transition">
+                <button className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#1E2638] py-2 text-xs font-semibold text-blue-400 hover:border-blue-500 hover:bg-blue-500/5 transition">
                   <Plus className="h-4 w-4" />
                   <span>Add Stocks</span>
                 </button>
               </div>
 
-              {/* Portfolio Allocation Donut Chart Widget */}
               <div className="trade-card p-5">
                 <div className="flex items-center justify-between pb-2">
                   <h3 className="text-sm font-bold text-white">Portfolio Allocation</h3>
@@ -423,7 +407,6 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              {/* Quick Actions Grid */}
               <div className="trade-card p-5 space-y-3">
                 <h3 className="text-sm font-bold text-white">Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -460,6 +443,8 @@ export default function UserDashboard() {
                   </Link>
                 </div>
               </div>
+
+              <ChatbotWidget />
             </div>
           </div>
         </main>
@@ -467,3 +452,4 @@ export default function UserDashboard() {
     </div>
   );
 }
+
